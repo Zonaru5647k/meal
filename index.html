@@ -45,7 +45,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-800">
         <!-- Meal Entry Form -->
         <div class="bg-white p-5 rounded-xl shadow">
-          <h3 class="text-md font-bold text-green-700 mb-3 border-b pb-1">🍲 Daily Meal Entry</h3>
+          <h3 class="text-md font-bold text-green-700 mb-3 border-b pb-1">🍲 Daily Meal Entry / Edit</h3>
           <form id="mealForm" class="space-y-3">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">Select Date</label>
@@ -125,10 +125,8 @@
   </div>
 
   <script>
-    // আপনার দেওয়া অরিজিনাল লিংকটি এখানে বসানো হয়েছে
     const API_URL = "https://script.google.com/macros/s/AKfycbz9BtXfM6giFxzK-oGEdkQSMR_yQP6lZcA8loLvqkKT8uN-GApH2Cd_wYWQXAG_O8lV0g/exec"; 
     
-    // এডমিন পাসওয়ার্ড:
     const ADMIN_PASSWORD = "1234";
 
     let isAdminLoggedIn = false;
@@ -263,18 +261,19 @@
       renderHistoryTable();
     }
 
-    // Render Daily History Table
+    // Render Daily History Table (Updated with Edit Button)
     function renderHistoryTable() {
       const histHeader = document.getElementById('historyTableHeader');
       const histBody = document.getElementById('historyTableBody');
       
-      histHeader.innerHTML = `<th class="p-2 border">Date</th>` + members.map(m => `<th class="p-2 border">${m}</th>`).join('');
+      // এডমিন লগ-ইন থাকলে অ্যাকশন (Action) কলাম দেখাবে
+      histHeader.innerHTML = `<th class="p-2 border">Date</th>` + members.map(m => `<th class="p-2 border">${m}</th>`).join('') + (isAdminLoggedIn ? `<th class="p-2 border text-blue-600">Action</th>` : '');
       histBody.innerHTML = '';
 
-      const dates = Object.keys(dataStore.meals).sort().reverse(); // Sort latest dates first
+      const dates = Object.keys(dataStore.meals).sort().reverse(); 
       
       if (dates.length === 0) {
-        histBody.innerHTML = `<tr><td colspan="${members.length + 1}" class="p-4 text-gray-400">No meal records added yet.</td></tr>`;
+        histBody.innerHTML = `<tr><td colspan="${members.length + (isAdminLoggedIn ? 2 : 1)}" class="p-4 text-gray-400">No meal records added yet.</td></tr>`;
         return;
       }
 
@@ -284,10 +283,35 @@
           let count = dataStore.meals[d][m] || 0;
           row += `<td class="p-2 border ${count > 0 ? 'font-semibold text-green-700' : 'text-gray-400'}">${count}</td>`;
         });
+        
+        // এডমিন লগ-ইন থাকলে এডিট বাটন দেখাবে
+        if (isAdminLoggedIn) {
+          row += `<td class="p-2 border"><button onclick="editMealEntry('${d}')" class="bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-lg text-xs font-bold transition shadow-sm">✏️ Edit</button></td>`;
+        }
+        
         row += `</tr>`;
         histBody.innerHTML += row;
       });
     }
+
+    // নির্দিষ্ট তারিখের ডেটা এডিট করার ফাংশন
+    window.editMealEntry = function(date) {
+      if (!isAdminLoggedIn) return;
+      
+      // ১. ফর্মের তারিখটি সিলেক্ট করা তারিখে সেট করা
+      document.getElementById('mealDate').value = date;
+      
+      // ২. মেম্বারদের ঘরে আগের এন্ট্রি করা মিলের সংখ্যাগুলো বসিয়ে দেওয়া
+      members.forEach(m => {
+        document.getElementById(`meal_${m}`).value = dataStore.meals[date][m] || 0;
+      });
+      
+      // ৩. ফর্মটি যাতে চোখে পড়ে তাই স্ক্রল করে উপরে নিয়ে যাওয়া
+      document.getElementById('mealForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // ইউজারকে মেসেজ দেওয়া
+      alert(`✏️ ${date} তারিখের ডেটা এডিট মোডে আনা হয়েছে!\n\nউপরের Daily Meal ফর্মে সংখ্যাগুলো পরিবর্তন করে "Save Meals" বাটনে ক্লিক করুন।`);
+    };
 
     window.updVal = function(type, member, value) {
       if (!isAdminLoggedIn) return;
